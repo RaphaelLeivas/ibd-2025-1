@@ -1,4 +1,4 @@
-import aux_func
+import tests.db_utils as db_utils
 
-print(aux_func.foo())
-print(aux_func.bar())
+print(db_utils.foo())
+print(db_utils.bar())
