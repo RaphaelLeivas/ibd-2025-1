@@ -1,0 +1,22 @@
+// Schema do Banco de Dados gas_data
+digraph ERD {
+	node [fontname=Helvetica shape=record style=rounded]
+	edge [fontname=Helvetica fontsize=10]
+	rankdir=LR
+	Operador [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD BGCOLOR="lightblue"><B>Operador</B></TD></TR><TR><TD ALIGN="LEFT">codigo_operador <I>(INTEGER)</I> <B>(PK)</B></TD></TR><TR><TD ALIGN="LEFT">nome_operador <I>(TEXT)</I></TD></TR></TABLE>>]
+	Carregador [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD BGCOLOR="lightblue"><B>Carregador</B></TD></TR><TR><TD ALIGN="LEFT">codigo_carregador <I>(INTEGER)</I> <B>(PK)</B></TD></TR><TR><TD ALIGN="LEFT">nome_carregador <I>(TEXT)</I></TD></TR></TABLE>>]
+	Variavel [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD BGCOLOR="lightblue"><B>Variavel</B></TD></TR><TR><TD ALIGN="LEFT">id_variavel <I>(INTEGER)</I> <B>(PK)</B></TD></TR><TR><TD ALIGN="LEFT">nome_variavel <I>(TEXT)</I></TD></TR><TR><TD ALIGN="LEFT">unidade_medida <I>(TEXT)</I></TD></TR></TABLE>>]
+	sqlite_sequence [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD BGCOLOR="lightblue"><B>sqlite_sequence</B></TD></TR><TR><TD ALIGN="LEFT">name <I>()</I></TD></TR><TR><TD ALIGN="LEFT">seq <I>()</I></TD></TR></TABLE>>]
+	Instalacao_Transporte [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD BGCOLOR="lightblue"><B>Instalacao_Transporte</B></TD></TR><TR><TD ALIGN="LEFT">codigo_instalacao_transporte <I>(INTEGER)</I> <B>(PK)</B></TD></TR><TR><TD ALIGN="LEFT">nome_instalacao_transporte <I>(TEXT)</I></TD></TR><TR><TD ALIGN="LEFT">codigo_operador <I>(INTEGER)</I></TD></TR></TABLE>>]
+	Instalacao_Gasoduto [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD BGCOLOR="lightblue"><B>Instalacao_Gasoduto</B></TD></TR><TR><TD ALIGN="LEFT">codigo_instalacao_gasoduto <I>(INTEGER)</I> <B>(PK)</B></TD></TR><TR><TD ALIGN="LEFT">nome_instalacao_gasoduto <I>(TEXT)</I></TD></TR><TR><TD ALIGN="LEFT">tipo_instalacao <I>(TEXT)</I></TD></TR><TR><TD ALIGN="LEFT">municipio <I>(TEXT)</I></TD></TR><TR><TD ALIGN="LEFT">uf <I>(TEXT)</I></TD></TR><TR><TD ALIGN="LEFT">codigo_instalacao_transporte <I>(INTEGER)</I></TD></TR></TABLE>>]
+	Contrato [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD BGCOLOR="lightblue"><B>Contrato</B></TD></TR><TR><TD ALIGN="LEFT">id_contrato <I>(INTEGER)</I> <B>(PK)</B></TD></TR><TR><TD ALIGN="LEFT">nome_contrato <I>(TEXT)</I></TD></TR><TR><TD ALIGN="LEFT">codigo_instalacao_transporte <I>(INTEGER)</I></TD></TR><TR><TD ALIGN="LEFT">codigo_carregador <I>(INTEGER)</I></TD></TR></TABLE>>]
+	Medicao [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD BGCOLOR="lightblue"><B>Medicao</B></TD></TR><TR><TD ALIGN="LEFT">id_medicao <I>(INTEGER)</I> <B>(PK)</B></TD></TR><TR><TD ALIGN="LEFT">data_medicao <I>(DATE)</I></TD></TR><TR><TD ALIGN="LEFT">valor <I>(REAL)</I></TD></TR><TR><TD ALIGN="LEFT">id_variavel <I>(INTEGER)</I></TD></TR><TR><TD ALIGN="LEFT">codigo_carregador <I>(INTEGER)</I></TD></TR><TR><TD ALIGN="LEFT">codigo_instalacao_transporte <I>(INTEGER)</I></TD></TR><TR><TD ALIGN="LEFT">codigo_instalacao_gasoduto <I>(INTEGER)</I></TD></TR></TABLE>>]
+	Instalacao_Transporte:codigo_operador -> Operador:codigo_operador [label="  FK"]
+	Instalacao_Gasoduto:codigo_instalacao_transporte -> Instalacao_Transporte:codigo_instalacao_transporte [label="  FK"]
+	Contrato:codigo_carregador -> Carregador:codigo_carregador [label="  FK"]
+	Contrato:codigo_instalacao_transporte -> Instalacao_Transporte:codigo_instalacao_transporte [label="  FK"]
+	Medicao:codigo_instalacao_gasoduto -> Instalacao_Gasoduto:codigo_instalacao_gasoduto [label="  FK"]
+	Medicao:codigo_instalacao_transporte -> Instalacao_Transporte:codigo_instalacao_transporte [label="  FK"]
+	Medicao:codigo_carregador -> Carregador:codigo_carregador [label="  FK"]
+	Medicao:id_variavel -> Variavel:id_variavel [label="  FK"]
+}
