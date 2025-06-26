@@ -47,98 +47,128 @@ def is_table_in_1nf(db_file, table_name):
         conn.close()
 
 
+
+
 def is_table_in_2nf(db_file, table_name):
     """
-    Verifies if a table in a SQLite database is in Second Normal Form (2NF).
-    
+    Verifica se uma tabela em um banco de dados SQLite está na Segunda Forma Normal (2NF).
+
+    Esta função usa heurísticas baseadas no esquema da tabela. A verificação é definitiva
+    para tabelas com chaves primárias simples. Para chaves compostas, a função não pode
+    provar a dependência funcional e, portanto, adota uma abordagem conservadora,
+    sinalizando potenciais violações para revisão manual.
+
     Args:
-        db_file (str): Path to the SQLite database file.
-        table_name (str): Name of the table to verify.
-    
+        db_file (str): Caminho para o arquivo do banco de dados SQLite.
+        table_name (str): Nome da tabela a ser verificada.
+
     Returns:
-        bool: True if the table is in 2NF, False otherwise.
+        bool: True se a tabela está em 2NF, False caso contrário ou se uma
+              violação for suspeita.
     """
     conn = sqlite3.connect(db_file)
     try:
         cursor = conn.cursor()
-        
-        # Step 1: Check if the table has a primary key
-        cursor.execute(f"PRAGMA table_info({table_name});")
+
+        # Etapa 1: Obter informações das colunas e identificar a chave primária
+        cursor.execute(f"PRAGMA table_info('{table_name}');")
         columns_info = cursor.fetchall()
-        primary_keys = [col[1] for col in columns_info if col[5] == 1]  # Column with PK flag
         
-        if not primary_keys:
-            print(f"The table '{table_name}' does not have a primary key, so it cannot be in 2NF.")
+        if not columns_info:
+            print(f"Erro: A tabela '{table_name}' não existe no banco de dados.")
             return False
-        
-        # Step 2: Check for partial dependency
-        # A table is not in 2NF if non-prime attributes depend on part of the primary key
-        # For composite primary keys, we need to check dependencies for each part of the key
-        cursor.execute(f"SELECT sql FROM sqlite_master WHERE type='table' AND name='{table_name}';")
-        create_table_sql = cursor.fetchone()[0]
-        
-        # Extract foreign key constraints
-        foreign_keys = []
-        for line in create_table_sql.splitlines():
-            if "FOREIGN KEY" in line:
-                foreign_keys.append(line.strip())
-        
-        if foreign_keys:
-            print(f"The table '{table_name}' has foreign key constraints, which may indicate partial dependencies.")
+
+        all_columns = {col[1] for col in columns_info}
+        primary_key_columns = {col[1] for col in columns_info if col[5] > 0}
+
+        # Etapa 2: Verificar se existe uma chave primária
+        if not primary_key_columns:
+            print(f"AVISO: A tabela '{table_name}' não possui chave primária. Não está em 2NF.")
             return False
+
+        # Etapa 3: Se a chave primária é simples (só uma coluna), não pode haver dependência parcial.
+        # A tabela está automaticamente em 2NF (assumindo que está em 1NF).
+        if len(primary_key_columns) == 1:
+            print(f"INFO: A tabela '{table_name}' possui uma chave primária simples. Está em 2NF.")
+            return True
+
+        # Etapa 4: Se a chave primária é composta, verificar a dependência parcial.
+        # Uma violação ocorre se um atributo não-primo depende de parte da chave composta.
+        non_prime_attributes = all_columns - primary_key_columns
         
-        print(f"The table '{table_name}' is in 2NF.")
-        return True
+        # Se não há atributos não-primos, não pode haver dependência parcial.
+        # A chave cobre a tabela inteira.
+        if not non_prime_attributes:
+            print(f"INFO: A tabela '{table_name}' tem uma chave primária composta, mas não possui atributos não-primos. Está em 2NF.")
+            return True
+            
+        # Se há atributos não-primos, existe o RISCO de uma violação da 2NF.
+        # Não podemos determinar programaticamente a dependência funcional.
+        # Portanto, sinalizamos como uma falha que requer verificação manual.
+        print(f"AVISO: A tabela '{table_name}' tem uma chave primária composta e os seguintes atributos não-primos: {non_prime_attributes}.")
+        print("      É necessário verificar manualmente se cada um desses atributos depende da CHAVE COMPOSTA INTEIRA.")
+        print(f"      Se algum atributo depender de apenas uma parte da chave {primary_key_columns}, a tabela não está em 2NF.")
+        return False
+
+    except sqlite3.OperationalError as e:
+        print(f"Erro operacional ao verificar a tabela '{table_name}': {e}")
+        return False
     except Exception as e:
-        print(f"Error verifying 2NF for table '{table_name}': {e}")
+        print(f"Um erro inesperado ocorreu ao verificar a tabela '{table_name}': {e}")
         return False
     finally:
         conn.close()
 
-
 def is_table_in_3nf(db_file, table_name):
     """
-    Verifies if a table in a SQLite database is in Third Normal Form (3NF).
-    
+    Verifica se uma tabela em um banco de dados SQLite está na Terceira Forma Normal (3NF).
+
+    Esta função usa heurísticas baseadas no esquema. Ela primeiro verifica se a tabela
+    está em 2NF e, em seguida, procura por indicadores de dependências transitivas,
+    como chaves estrangeiras que não fazem parte da chave primária.
+
     Args:
-        db_file (str): Path to the SQLite database file.
-        table_name (str): Name of the table to verify.
+        db_file (str): Caminho para o arquivo do banco de dados SQLite.
+        table_name (str): Nome da tabela a ser verificada.
     
     Returns:
-        bool: True if the table is in 3NF, False otherwise.
+        bool: True se a tabela está em 3NF, False caso contrário.
     """
+
+    
     conn = sqlite3.connect(db_file)
     try:
         cursor = conn.cursor()
         
-        # Step 1: Check if the table has a primary key
-        cursor.execute(f"PRAGMA table_info({table_name});")
+        # Obter a chave primária
+        cursor.execute(f"PRAGMA table_info('{table_name}');")
         columns_info = cursor.fetchall()
-        primary_keys = [col[1] for col in columns_info if col[5] == 1]  # Column with PK flag
+        primary_key_columns = {col[1] for col in columns_info if col[5] > 0}
         
-        if not primary_keys:
-            print(f"The table '{table_name}' does not have a primary key, so it cannot be in 3NF.")
-            return False
+        # Etapa 2: Procurar por dependências transitivas.
+        # A heurística é verificar se existe uma chave estrangeira (FK)
+        # cuja coluna de origem NÃO faz parte da chave primária.
         
-        # Step 2: Check for transitive dependencies
-        # A table is not in 3NF if non-prime attributes depend on other non-prime attributes
-        cursor.execute(f"SELECT sql FROM sqlite_master WHERE type='table' AND name='{table_name}';")
-        create_table_sql = cursor.fetchone()[0]
+        cursor.execute(f"PRAGMA foreign_key_list('{table_name}');")
+        foreign_keys = cursor.fetchall()
         
-        # Extract foreign key constraints
-        foreign_keys = []
-        for line in create_table_sql.splitlines():
-            if "FOREIGN KEY" in line:
-                foreign_keys.append(line.strip())
+        for fk in foreign_keys:
+            fk_from_column = fk[3]  # Coluna na tabela atual que é a FK
+            
+            # Se a coluna da FK não está na chave primária, é um forte indício
+            # de uma dependência transitiva.
+            if fk_from_column not in primary_key_columns:
+                print(f"AVISO: A tabela '{table_name}' possui uma chave estrangeira ('{fk_from_column}') que não é parte da chave primária.")
+                print(f"       Isso sugere uma dependência transitiva, o que viola a 3NF.")
+                print(f"       Atributos nesta tabela podem depender de '{fk_from_column}' em vez de dependerem da chave primária {primary_key_columns}.")
+                return False
         
-        if foreign_keys:
-            print(f"The table '{table_name}' has foreign key constraints, which may indicate transitive dependencies.")
-            return False
-        
-        print(f"The table '{table_name}' is in 3NF.")
+        # Se passou na verificação de 2NF e não encontrou FKs suspeitas, está em 3NF.
+        print(f"INFO: A tabela '{table_name}' está em 2NF e não foram encontrados indicadores de dependência transitiva. A tabela está em 3NF.")
         return True
+
     except Exception as e:
-        print(f"Error verifying 3NF for table '{table_name}': {e}")
+        print(f"Erro ao verificar 3NF para a tabela '{table_name}': {e}")
         return False
     finally:
         conn.close()
