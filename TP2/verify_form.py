@@ -206,3 +206,53 @@ def verify_database_normalization(db_file, table_name=None):
     
     conn.close()
     return normalization_status
+
+from itertools import combinations
+
+def verificar_2nf(df, pk_cols, non_prime_attrs):
+    """
+    Verifica potenciais violações da 2NF em um DataFrame.
+
+    Argumentos:
+    df (pd.DataFrame): O DataFrame a ser analisado.
+    pk_cols (list): Uma lista com os nomes das colunas da chave primária.
+    non_prime_attrs (list): Uma lista com os nomes dos atributos não-primos.
+
+    Retorna:
+    None. Imprime os resultados da análise.
+    """
+    print("--- Iniciando verificação de 2NF ---")
+    print(f"Chave Primária: {pk_cols}")
+    print(f"Atributos Não-Primos: {non_prime_attrs}\n")
+
+    found_violation = False
+
+    # Gera todos os subconjuntos próprios da chave primária
+    key_subsets = []
+    for i in range(1, len(pk_cols)):
+        for subset in combinations(pk_cols, i):
+            key_subsets.append(list(subset))
+
+    # Para cada atributo não-primo, testa contra cada subconjunto da chave
+    for attr in non_prime_attrs:
+        print(f"--- Analisando o atributo não-primo: '{attr}' ---")
+        for subset in key_subsets:
+            # Agrupa pelo subconjunto da chave e conta quantos valores únicos do atributo existem
+            # Se a contagem for sempre 1, significa que o subconjunto determina o atributo
+            grouped = df.groupby(subset)[attr].nunique()
+
+            if (grouped == 1).all():
+                print(f"[ALERTA] POTENCIAL VIOLAÇÃO DE 2NF ENCONTRADA!")
+                print(f"  O atributo '{attr}' parece depender de um subconjunto da chave: {subset}.")
+                print(f"  Isso significa que para um mesmo valor de {subset}, o valor de '{attr}' é sempre o mesmo.\n")
+                found_violation = True
+            else:
+                # Opcional: descomente para ver as verificações que passaram
+                # print(f"[INFO] Nenhuma dependência óbvia de '{attr}' em {subset}.")
+                pass
+    
+    if not found_violation:
+        print("\n--- Resultado ---")
+        print("Nenhuma violação óbvia da 2NF foi encontrada com base nos dados atuais.")
+    
+    print("--- Verificação Concluída ---")
